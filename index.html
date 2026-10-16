@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finca Plátano — Sistema Contable</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🍌</div>
+    <div>
+      <div class="logo-text">Finca Plátano</div>
+      <div class="logo-sub">Sistema Contable Digital</div>
+    </div>
+  </div>
+  <div class="header-saldo">
+    <div class="saldo-label">Saldo Actual</div>
+    <div class="saldo-valor" id="saldoHeader">$0</div>
+  </div>
+</header>
+
+<nav>
+  <button class="tab active" onclick="showTab('registro', this)">📋 Registro</button>
+  <button class="tab" onclick="showTab('resumen', this)">📊 Resumen</button>
+  <button class="tab" onclick="showTab('graficas', this)">📈 Gráficas</button>
+  <button class="tab" onclick="showTab('exportar', this)">💾 Exportar</button>
+</nav>
+
+<main>
+
+  <!-- TAB REGISTRO -->
+  <div class="tab-content active" id="tab-registro">
+    <div class="cards">
+      <div class="card verde">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Total Ingresos</div>
+        <div class="card-valor" id="cardIngresos">$0</div>
+      </div>
+      <div class="card rojo">
+        <div class="card-icon">📉</div>
+        <div class="card-label">Total Costos</div>
+        <div class="card-valor" id="cardCostos">$0</div>
+      </div>
+      <div class="card amarillo">
+        <div class="card-icon">⚖️</div>
+        <div class="card-label">Utilidad Neta</div>
+        <div class="card-valor" id="cardUtilidad">$0</div>
+      </div>
+      <div class="card azul">
+        <div class="card-icon">📦</div>
+        <div class="card-label">Transacciones</div>
+        <div class="card-valor" id="cardTx">0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">➕ Nueva Transacción</span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Fecha</label>
+          <input type="date" id="fFecha">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descripción</label>
+          <input type="text" id="fDesc" placeholder="Ej: Corte de plátano...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select id="fCat">
+            <option value="Ingreso">💚 Ingreso</option>
+            <option value="Costo">🔴 Costo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cantidad</label>
+          <input type="number" id="fCantidad" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio</label>
+          <input type="number" id="fPrecio" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto directo</label>
+          <input type="number" id="fMonto" placeholder="0 (opcional)" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn btn-add" onclick="agregarTransaccion()">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="panel-header" style="background: var(--fondo);">
+        <span class="panel-title">📋 Movimientos</span>
+        <div class="filtros">
+          <input type="text" id="filtroDesc" placeholder="🔍 Buscar..." oninput="renderTabla()" style="min-width:180px;">
+          <select id="filtroCat" onchange="renderTabla()">
+            <option value="">Todas las categorías</option>
+            <option value="Ingreso">Ingreso</option>
+            <option value="Costo">Costo</option>
+          </select>
+          <select id="filtroMes" onchange="renderTabla()">
+            <option value="">Todos los meses</option>
+          </select>
+          <button class="btn btn-sm" onclick="limpiarFiltros()">✖ Limpiar</button>
+          <button class="btn btn-pdf" onclick="abrirModalPDF()">📄 PDF</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th>
+              <th class="num">Cantidad</th><th class="num">Precio</th>
+              <th class="num">Ingreso</th><th class="num">Costo</th>
+              <th class="num">Saldo</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty" style="display:none">
+          <div class="empty-icon">🍌</div>
+          <div class="empty-text">No hay transacciones aún.<br>¡Agrega tu primer movimiento!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB RESUMEN -->
+  <div class="tab-content" id="tab-resumen">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📊 Resumen por Mes</span>
+        <button class="btn btn-pdf" onclick="generarPDFResumen()">📄 Descargar PDF</button>
+      </div>
+      <div class="resumen-grid" id="resumenContenido"></div>
+    </div>
+  </div>
+
+  <!-- TAB GRÁFICAS -->
+  <div class="tab-content" id="tab-graficas">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📈 Ingresos vs Costos por Mes</span>
+      </div>
+      <div class="chart-area" id="chartArea"></div>
+    </div>
+  </div>
+
+  <!-- TAB EXPORTAR -->
+  <div class="tab-content" id="tab-exportar">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">💾 Exportar Datos</span>
+      </div>
+      <div class="export-area">
+        <div class="export-grid">
+          <div class="export-card pdf-card" onclick="abrirModalPDF()">
+            <div class="export-card-icon">📄</div>
+            <div class="export-card-title" style="color:var(--rojo)">Exportar PDF</div>
+            <div class="export-card-desc">Reporte completo listo para imprimir</div>
+          </div>
+          <div class="export-card" onclick="exportarCSV()">
+            <div class="export-card-icon">📊</div>
+            <div class="export-card-title">Exportar CSV</div>
+            <div class="export-card-desc">Abre en Excel o Google Sheets</div>
+          </div>
+          <div class="export-card" onclick="exportarJSON()">
+            <div class="export-card-icon">🗃️</div>
+            <div class="export-card-title">Exportar JSON</div>
+            <div class="export-card-desc">Copia de seguridad completa</div>
+          </div>
+          <div class="export-card" onclick="importarJSON()">
+            <div class="export-card-icon">📥</div>
+            <div class="export-card-title">Importar JSON</div>
+            <div class="export-card-desc">Restaurar copia de seguridad</div>
+          </div>
+          <div class="export-card" onclick="limpiarTodo()" style="border-color:rgba(224,82,82,0.3)">
+            <div class="export-card-icon">🗑️</div>
+            <div class="export-card-title" style="color:var(--rojo)">Borrar Todo</div>
+            <div class="export-card-desc">Eliminar todos los registros</div>
+          </div>
+        </div>
+        <input type="file" id="archivoImport" accept=".json" style="display:none" onchange="leerArchivoJSON(event)">
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL PDF -->
+<div class="modal-overlay" id="modalPDF">
+  <div class="modal">
+    <div class="modal-title">📄 Generar Reporte PDF</div>
+    <label class="modal-option">
+      <input type="radio" name="tipoPDF" value="completo" checked>
+      <div class="modal-option-text">
+        <div class="modal-option-title">Reporte Completo</div>
+        <div class="modal-option-desc">Todos los movimientos + resumen general</div>
+      </div>
+    </label>
+    <label class="modal-option">
+      <input type="radio" name="tipoPDF" value="resumen">
+      <div class="modal-option-text">
+        <div class="modal-option-title">Solo Resumen por Mes</div>
+        <div class="modal-option-desc">Totales de ingresos, costos y utilidad</div>
+      </div>
+    </label>
+    <label class="modal-option">
+      <input type="radio" name="tipoPDF" value="filtrado">
+      <div class="modal-option-text">
+        <div class="modal-option-title">Vista Actual (con filtros)</div>
+        <div class="modal-option-desc">Solo los registros visibles en pantalla</div>
+      </div>
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="cerrarModalPDF()">Cancelar</button>
+      <button class="btn btn-pdf" onclick="generarPDF()">📄 Generar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
